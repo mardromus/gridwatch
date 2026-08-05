@@ -45,6 +45,7 @@ async def generate_operator_brief(
             "asset_id",
             "pincode",
             "affected_poles",
+            "affected_households",
             "confidence",
             "reasons",
             "status",
@@ -115,7 +116,8 @@ def deterministic_brief(incident: dict[str, Any], language: str) -> OperatorBrie
     return OperatorBrief(
         headline=f"{incident.get('kind', 'Fault').title()} fault at {asset_id}",
         situation=(
-            f"Incident {incident.get('incident_id')} affects approximately "
+            f"Incident {incident.get('incident_id')} affects an estimated "
+            f"{incident.get('affected_households', 0)} homes across "
             f"{incident.get('affected_poles', 0)} poles in PIN "
             f"{incident.get('pincode') or 'unavailable'}. "
             f"Current workflow state: {status}."

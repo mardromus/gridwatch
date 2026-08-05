@@ -107,8 +107,8 @@ export default function App() {
     const leftClosed = left.status === "closed";
     const rightClosed = right.status === "closed";
     if (leftClosed !== rightClosed) return leftClosed ? 1 : -1;
-    if (!leftClosed && left.affected_poles !== right.affected_poles) {
-      return right.affected_poles - left.affected_poles;
+    if (!leftClosed && left.affected_households !== right.affected_households) {
+      return right.affected_households - left.affected_households;
     }
     return Date.parse(right.detected_at) - Date.parse(left.detected_at);
   });
@@ -165,7 +165,7 @@ export default function App() {
         <div className={active.length ? "metric critical" : "metric clear"}>
           <span>Active incidents</span><strong>{dashboard?.summary.active_incidents ?? "—"}</strong>
         </div>
-        <div className="metric"><span>Poles affected</span><strong>{dashboard?.summary.affected_poles ?? "—"}</strong></div>
+        <div className="metric"><span>Homes affected</span><strong>{dashboard?.summary.affected_households.toLocaleString("en-IN") ?? "—"}</strong></div>
         <div className="metric"><span>Devices reporting</span><strong>{dashboard?.summary.reporting_devices.toLocaleString("en-IN") ?? "—"}</strong></div>
         <div className="metric topology"><span>Topology inferred</span><strong>{dashboard?.summary.inferred_topology_pct ?? "—"}%</strong></div>
         <div className="metric ingest"><span>Messages accepted</span><strong>{dashboard?.summary.ingest.accepted.toLocaleString("en-IN") ?? "—"}</strong></div>
@@ -192,7 +192,7 @@ export default function App() {
                   <span className="incident-meta"><b>{incident.kind.toUpperCase()}</b> · {formatTime(incident.detected_at)}</span>
                   {incident.fingerprint.schedule_context === "mismatch" && <span className="plan-flag">PLAN MISMATCH</span>}
                   <strong>{incident.asset_id}</strong>
-                  <span>PIN {incident.pincode ?? "unavailable"} · {incident.affected_poles} poles</span>
+                  <span>PIN {incident.pincode ?? "unavailable"} · {incident.affected_households} homes · {incident.affected_poles} poles</span>
                   <span className="row-footer"><i className={`status-dot ${incident.status}`} />{statusLabel(incident.status)}<b>{Math.round(incident.confidence * 100)}%</b></span>
                 </span>
                 <ChevronRight size={17} />
@@ -290,7 +290,7 @@ function IncidentDetail({ incident, brief, language, busy, onLanguage, onBrief, 
       </div>
       <div className="location-line"><MapPin size={17} /><strong>PIN {incident.pincode ?? "unavailable"}</strong><span>{incident.lat.toFixed(5)}, {incident.lon.toFixed(5)}</span></div>
       <div className="impact-block">
-        <div><span>Estimated impact</span><strong>{incident.affected_poles}</strong><small>downstream poles</small></div>
+        <div><span>Estimated impact</span><strong>{incident.affected_households}</strong><small>homes · {incident.affected_poles} poles</small></div>
         <div><span>Confidence</span><strong>{Math.round(incident.confidence * 100)}%</strong><small>{incident.confidence >= 0.8 ? "high" : "verify on map"}</small></div>
       </div>
       <div className="confidence-track"><i style={{ width: `${incident.confidence * 100}%` }} /></div>
@@ -307,6 +307,30 @@ function IncidentDetail({ incident, brief, language, busy, onLanguage, onBrief, 
           </div>
         </div>
       )}
+
+      <section className="detail-section ai-section">
+        <div className="section-title"><div><Bot size={17} /><h3>Dispatch brief</h3></div><select value={language} onChange={(event) => onLanguage(event.target.value)}><option>English</option><option>Kannada</option><option>Hindi</option></select></div>
+        {!brief && (
+          <div className="brief-preview">
+            <strong>{incident.kind.toUpperCase()} fault · {incident.asset_id}</strong>
+            <p>
+              Estimated {incident.affected_households} homes affected across {incident.affected_poles}
+              {" "}poles in PIN {incident.pincode ?? "unavailable"}. Localization confidence is {Math.round(incident.confidence * 100)}%.
+            </p>
+            <p className="brief-action">Review the highlighted impact corridor, acknowledge the incident, and dispatch only from the locked ticket facts.</p>
+            <button className="ai-button" onClick={onBrief} disabled={Boolean(busy)}><Sparkles size={16} />{busy === "brief" ? "Generating…" : "Refine or translate"}</button>
+            <small>Deterministic preview · model cannot change location or status</small>
+          </div>
+        )}
+        {brief && (
+          <div className="brief-output">
+            <strong>{brief.headline}</strong><p>{brief.situation}</p>
+            <ul>{brief.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
+            <p className="brief-action">{brief.recommended_action}</p>
+            <small>{brief.mode.replaceAll("_", " ")} · facts locked</small>
+          </div>
+        )}
+      </section>
 
       <section className="detail-section fingerprint-section">
         <div className="fingerprint-heading">
@@ -361,19 +385,6 @@ function IncidentDetail({ incident, brief, language, busy, onLanguage, onBrief, 
         </div>
         {incident.status === "resolved" && <div className="awaiting"><Radio size={16} />Awaiting restoration telemetry. Manual closure is disabled.</div>}
         {incident.status === "closed" && <div className="verified"><Check size={16} />Verified automatically · {Math.round(incident.verification_ratio * 100)}% restored</div>}
-      </section>
-
-      <section className="detail-section ai-section">
-        <div className="section-title"><div><Bot size={17} /><h3>Operator brief</h3></div><select value={language} onChange={(event) => onLanguage(event.target.value)}><option>English</option><option>Kannada</option><option>Hindi</option></select></div>
-        {!brief && <button className="ai-button" onClick={onBrief} disabled={Boolean(busy)}><Sparkles size={16} />{busy === "brief" ? "Generating…" : "Generate grounded brief"}</button>}
-        {brief && (
-          <div className="brief-output">
-            <strong>{brief.headline}</strong><p>{brief.situation}</p>
-            <ul>{brief.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
-            <p className="brief-action">{brief.recommended_action}</p>
-            <small>{brief.mode.replaceAll("_", " ")} · facts locked</small>
-          </div>
-        )}
       </section>
 
       <section className="detail-section timeline">

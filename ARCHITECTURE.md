@@ -29,12 +29,13 @@ durable, but replay is not implemented. That is the largest demo/production gap.
 
 ## Data and ingestion
 
-The seed is deterministic: 2,160 poles, 30 DTs, six feeders, three radial LT
-arms per DT, approximately 91% device coverage, 8% firmware 1.2, 3% missing PIN
-codes, 60% missing recorded topology, and 4% of installed devices independently
-silent at startup. Silent devices remain unknown rather than dark, so they add
-uncertainty without creating false fault tickets. The seed is large enough to
-exercise the shape without making a reviewer wait for 38,400 rows.
+The seed is deterministic: 2,160 poles, 30 DTs, six feeders, two asymmetric LT
+circuits per DT with bent trunks and lateral branches, approximately 91% device
+coverage, 8% firmware 1.2, 3% missing PIN codes, 60% missing recorded topology,
+and 4% of installed devices independently silent at startup. Inference keeps
+near-transformer roots in separate angular sectors, preventing physically
+separate circuits from being cross-linked. Silent devices remain unknown rather
+than dark, so they add uncertainty without creating false fault tickets.
 
 For each telemetry event the ingest path:
 
@@ -192,11 +193,12 @@ $O(V+E)$ without changing the result.
 
 Allowed states are `detected -> acknowledged -> crew_assigned -> resolved ->
 closed`. `resolved` means only that work was marked complete. There is no manual
-close endpoint. A ticket closes after at least 80% of instrumented affected poles
-send fresh energized telemetry after `resolved`; the timeline records separate
-`verified` and `closed` events. Repair before work completion returns a conflict
-and leaves the simulator repair action available, so restoration cannot bypass
-workflow or become impossible to verify later.
+close endpoint. A ticket closes after at least 80% of poles that explicitly
+reported dark send fresh energized telemetry after `resolved`; inferred or
+silent poles widen the impact corridor but do not vote on restoration. The
+timeline records separate `verified` and `closed` events. Repair before work
+completion returns a conflict and leaves the simulator repair action available,
+so restoration cannot bypass workflow or become impossible to verify later.
 
 ## API
 
@@ -221,19 +223,22 @@ a cold start.
 
 ## Operator UI
 
-The first row answers: how many incidents, how many poles, and whether topology
-is inferred. The left queue puts open work first and ranks it by affected poles.
+The first row answers: how many incidents, how many homes, and whether topology
+is inferred. The left queue puts open work first and ranks it by estimated homes.
+Homes are the DT's served-household count multiplied by the affected share of
+that DT; feeder incidents sum the same estimate across DTs.
 Selecting a ticket focuses the map once; polling never overrides subsequent pan
 or zoom. The focused DT shows live and no-device poles for local boundary context
 without rendering every live pole network-wide. Solid edges are registry-recorded;
-dashed amber edges are geometry-inferred. Focused pole markers expose ID, state,
-DT, and topology source on demand. The right pane gives location, impact,
-confidence, causal fit, evidence, and only then workflow actions. Low confidence
-is amber and includes a plain-language reason. The dark fingerprint panel
-separates location uncertainty from packet-pattern fit. A schedule contradiction
-gets an amber warning above that proof. Manual closure is absent. Simulation is
-collapsed into a separate Scenario Lab, grouped into grid faults and exception
-tests, so training controls cannot be mistaken for operational actions.
+dashed amber edges are geometry-inferred. A red-to-amber impact corridor follows
+the predicted downstream pole set: the failed boundary is hottest, downstream
+branches cool with topology depth, and incident bubble size scales with estimated
+homes. Focused pole markers expose ID, state, DT, and topology source on demand.
+The right pane gives location, homes/poles impact, a deterministic dispatch
+preview, optional model refinement/translation, causal fit, evidence, and only
+then workflow actions. Manual closure is absent. Simulation is collapsed into a
+separate Scenario Lab, grouped into grid faults and exception tests, so training
+controls cannot be mistaken for operational actions.
 
 The deliberate omission is analytics. At 2 a.m. historical charts compete with
 the current boundary and next action. The decision most likely to be wrong is
@@ -242,11 +247,11 @@ may show a modal or dedicated route is faster.
 
 ## AI feature
 
-The LLM writes a short shift/dispatch brief in the operator's language from a
-locked JSON fact set, including causal fit and schedule mismatch evidence. It
-cannot localize, alter confidence, change status, or close a ticket. Output is
-schema-validated, temperature is 0.1, and failures fall back to a deterministic
-brief that remains fully usable and visibly labeled.
+Every ticket immediately shows a deterministic dispatch preview from its locked
+facts. On request, the LLM refines or translates that brief from the same schema,
+including homes, causal fit, and schedule mismatch evidence. It cannot localize,
+alter confidence, change status, or close a ticket. Output is schema-validated,
+temperature is 0.1, and failures fall back to the deterministic brief.
 
 Default model cost is estimated at about USD 0.001 per generated brief, not per
 telemetry event. This is where a language model earns its keep: concise
@@ -260,11 +265,11 @@ temporary SQLite file rather than `:memory:`:
 
 | Required metric | Target | Measured | Local result |
 |---|---:|---:|---|
-| fault occurrence -> localized ticket response | < 120 s p95 | 108.2 ms p95 | met |
-| sustained ingest throughput | >= 500 msg/s | 13,136 msg/s across 50,000 events | met |
-| 5,000-message burst without loss | < 10 s | 0.136 s; 5,000 audit rows | met |
-| incident-list API load | < 2 s | 1.5 ms p95 | met |
-| restoration -> auto-verified response | < 120 s p95 | 373.4 ms p95 | met |
+| fault occurrence -> localized ticket response | < 120 s p95 | 107.4 ms p95 | met |
+| sustained ingest throughput | >= 500 msg/s | 13,358 msg/s across 50,000 events | met |
+| 5,000-message burst without loss | < 10 s | 0.195 s; 5,000 audit rows | met |
+| incident-list API load | < 2 s | 2.4 ms p95 | met |
+| restoration -> auto-verified response | < 120 s p95 | 27.0 ms p95 | met |
 
 `backend/benchmark.py` repeats 30 fault and restoration workflows and asserts
 the resulting incident states. HTTP serialization, Pydantic validation,

@@ -75,12 +75,16 @@ The most useful instructions were constraint-heavy and falsifiable:
 > change confidence, assign a crew, or mutate status. Validate its schema and
 > provide a no-key fallback.
 
+The shipped UI shows that deterministic fallback immediately. A model call is
+made only when an operator asks to refine or translate it, keeping dispatch
+usable without a key and preventing telemetry volume from creating model cost.
+
 Those prompts worked because they described observable behavior and forbidden
 failure modes, not just framework choices.
 
 ## How output was checked
 
-- 19 backend tests cover localization, topology provenance, simultaneous faults,
+- 29 backend tests cover localization, topology provenance, simultaneous faults,
   sensor noise, evidence-based schedule suppression, planned-window mismatch,
   dirty telemetry, late retries, causal fit, and telemetry-gated closure.
 - The production frontend passed TypeScript build and ESLint.

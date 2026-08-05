@@ -32,6 +32,7 @@ export function MapView({ network, incidents, selected, onSelect }: MapViewProps
   const focusedPoles = selected?.dt_id
     ? network?.poles.filter((pole) => pole.dt_id === selected.dt_id) ?? []
     : [];
+  const affectedPoleIds = new Set(selected?.affected_pole_ids ?? []);
   const focusedEdges = focusedPoles
     .map((pole) => {
       const upstream = pole.parent_pole_id
@@ -49,6 +50,29 @@ export function MapView({ network, incidents, selected, onSelect }: MapViewProps
       };
     })
     .filter((edge): edge is NonNullable<typeof edge> => Boolean(edge));
+  const affectedDepth = new Map<string, number>();
+  for (const poleId of affectedPoleIds) {
+    let depth = 0;
+    let current = poleById.get(poleId);
+    const seen = new Set([poleId]);
+    while (current?.parent_pole_id && affectedPoleIds.has(current.parent_pole_id)) {
+      if (seen.has(current.parent_pole_id)) break;
+      seen.add(current.parent_pole_id);
+      depth += 1;
+      current = poleById.get(current.parent_pole_id);
+    }
+    affectedDepth.set(poleId, depth);
+  }
+  const maxAffectedDepth = Math.max(0, ...affectedDepth.values());
+  const heatIntensity = (poleId: string) => {
+    const depth = affectedDepth.get(poleId) ?? maxAffectedDepth;
+    return maxAffectedDepth ? 1 - 0.55 * depth / maxAffectedDepth : 1;
+  };
+  const heatColor = (poleId: string) => {
+    const intensity = heatIntensity(poleId);
+    return `hsl(${Math.round(42 * (1 - intensity))} 84% ${Math.round(48 + 5 * (1 - intensity))}%)`;
+  };
+  const affectedEdges = focusedEdges.filter((edge) => affectedPoleIds.has(edge.poleId));
   const point = (poleId: string | null) => {
     const pole = poleId ? poleById.get(poleId) : null;
     return pole ? [pole.lat, pole.lon] as [number, number] : null;
@@ -90,6 +114,22 @@ export function MapView({ network, incidents, selected, onSelect }: MapViewProps
               : { color: "#405b55", weight: 1.5, opacity: 0.62 }}
           />
         ))}
+        {affectedEdges.map((edge) => (
+          <Polyline
+            key={`impact-glow-${edge.poleId}`}
+            positions={edge.positions}
+            interactive={false}
+            pathOptions={{ color: heatColor(edge.poleId), weight: 11, opacity: 0.18 }}
+          />
+        ))}
+        {affectedEdges.map((edge) => (
+          <Polyline
+            key={`impact-core-${edge.poleId}`}
+            positions={edge.positions}
+            interactive={false}
+            pathOptions={{ color: heatColor(edge.poleId), weight: 4, opacity: 0.9 }}
+          />
+        ))}
         {network?.transformers.map((transformer) => (
           <CircleMarker
             key={transformer.dt_id}
@@ -121,18 +161,25 @@ export function MapView({ network, incidents, selected, onSelect }: MapViewProps
         ))}
         {network?.poles.filter((pole) => !pole.energized).map((pole) => {
           const isFocused = pole.dt_id === selected?.dt_id;
+          const isAffected = affectedPoleIds.has(pole.pole_id);
+          const impact = isAffected ? heatIntensity(pole.pole_id) : 0;
           return (
             <CircleMarker
               key={pole.pole_id}
               center={[pole.lat, pole.lon]}
-              radius={isFocused ? 4 : 2.5}
+              radius={isFocused ? 3.5 + impact * 2 : 2.5}
               interactive={isFocused}
-              pathOptions={{ color: "#9e2f2f", fillColor: "#e5523f", fillOpacity: 0.9, weight: isFocused ? 2 : 1 }}
+              pathOptions={{
+                color: isAffected ? "#7c2119" : "#9e2f2f",
+                fillColor: isAffected ? heatColor(pole.pole_id) : "#e5523f",
+                fillOpacity: 0.92,
+                weight: isFocused ? 2 : 1,
+              }}
             >
               {isFocused && (
                 <Popup>
                   <strong>{pole.pole_id}</strong>
-                  <br />Power-loss state
+                  <br />{isAffected ? "Affected outage corridor" : "Power-loss state"}
                   <br />{pole.dt_id} · {pole.topology_source} topology
                 </Popup>
               )}
@@ -143,7 +190,8 @@ export function MapView({ network, incidents, selected, onSelect }: MapViewProps
           <CircleMarker
             key={incident.incident_id}
             center={[incident.lat, incident.lon]}
-            radius={incident.incident_id === selected?.incident_id ? 13 : 9}
+            radius={Math.min(24, 8 + Math.sqrt(incident.affected_households) * 1.15)
+              + (incident.incident_id === selected?.incident_id ? 3 : 0)}
             eventHandlers={{ click: () => onSelect(incident.incident_id) }}
             pathOptions={{
               color: incident.incident_id === selected?.incident_id ? "#17211f" : "#ffffff",
@@ -152,7 +200,7 @@ export function MapView({ network, incidents, selected, onSelect }: MapViewProps
               weight: 3,
             }}
           >
-            <Popup>{incident.asset_id} · {incident.affected_poles} poles</Popup>
+            <Popup>{incident.asset_id} · {incident.affected_households} homes · {incident.affected_poles} poles</Popup>
           </CircleMarker>
         ))}
         {boundaries.map((positions, index) => (
@@ -167,6 +215,7 @@ export function MapView({ network, incidents, selected, onSelect }: MapViewProps
         <span><i className="legend-dot transformer" />Transformer</span>
         {selected?.dt_id && <span><i className="legend-line recorded" />Recorded edge</span>}
         {selected?.dt_id && <span><i className="legend-line inferred" />Inferred edge</span>}
+        {selected?.dt_id && <span><i className="legend-line impact" />Impact corridor</span>}
         {selected?.dt_id && <span><i className="legend-dot live" />Live pole</span>}
         {selected?.dt_id && <span><i className="legend-dot no-device" />No device</span>}
         <span><i className="legend-dot incident" />Fault boundary</span>

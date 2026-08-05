@@ -29,6 +29,28 @@ class SeedNetworkTests(unittest.TestCase):
         for pole in self.network.poles:
             topology.ancestors(pole.pole_id)
 
+    def test_seed_has_branched_multi_circuit_layouts(self) -> None:
+        children = {pole.pole_id: 0 for pole in self.network.poles}
+        for parent_id in self.network.true_parent.values():
+            if parent_id:
+                children[parent_id] += 1
+
+        roots_by_dt: dict[str, int] = {}
+        inferred_roots_by_dt: dict[str, int] = {}
+        for pole in self.network.poles:
+            if self.network.true_parent[pole.pole_id] is None:
+                roots_by_dt[pole.dt_id] = roots_by_dt.get(pole.dt_id, 0) + 1
+            if (
+                pole.topology_source == TopologySource.INFERRED
+                and pole.parent_pole_id is None
+            ):
+                inferred_roots_by_dt[pole.dt_id] = inferred_roots_by_dt.get(pole.dt_id, 0) + 1
+
+        branch_points = sum(child_count > 1 for child_count in children.values())
+        self.assertEqual(set(roots_by_dt.values()), {2})
+        self.assertGreaterEqual(branch_points, len(self.network.transformers) * 4)
+        self.assertTrue(all(root_count >= 2 for root_count in inferred_roots_by_dt.values()))
+
 
 if __name__ == "__main__":
     unittest.main()

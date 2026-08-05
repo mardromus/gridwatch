@@ -16,6 +16,15 @@ class GridServiceTests(unittest.TestCase):
         self.assertEqual(len(incidents), 1)
         self.assertGreater(simulation["affected_poles"], 1)
         self.assertEqual(incidents[0]["kind"], "span")
+        self.assertGreater(incidents[0]["affected_households"], 0)
+        self.assertEqual(
+            len(incidents[0]["affected_pole_ids"]),
+            len(self.service.incidents[incidents[0]["incident_id"]].affected_pole_ids),
+        )
+        self.assertEqual(
+            self.service.dashboard()["summary"]["affected_households"],
+            incidents[0]["affected_households"],
+        )
         fingerprint = incidents[0]["fingerprint"]
         self.assertGreater(fingerprint["observed_dark"], 0)
         self.assertEqual(fingerprint["live_contradictions"], 0)

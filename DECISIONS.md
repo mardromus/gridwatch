@@ -2,6 +2,15 @@
 
 Newest first. Dates use the latest build date, 2026-08-05.
 
+## Show predicted impact without pretending it was observed
+
+**Chose:** estimate homes from each DT's served-household count and affected
+pole share, scale incident bubbles by homes, and render a topology-depth impact
+corridor separately from raw pole state. **Rejected:** one flat red region and
+ranking only by pole count. The corridor shows what the model predicts; only
+confirmed-dark reporters can vote on restoration, preserving the distinction
+between inference and evidence.
+
 ## Separate the scenario lab from operations
 
 **Chose:** a collapsed training sandbox with grid-fault and exception groups,
@@ -90,8 +99,8 @@ the acceptance command and public deployment harder to break.
 
 - A DT has at least two independent LT roots before the system labels a
   transformer fault; one root is ambiguous with a first-span fault.
-- Restoration is verified at 80% of instrumented affected poles with no fresh
-  dark evidence. Uninstrumented poles cannot directly vote.
+- Restoration is verified at 80% of instrumented poles that explicitly reported
+  dark. Silent, uninstrumented, and merely inferred poles cannot directly vote.
 - Scheduled scopes are known before matching telemetry enters the batch. A
   normalized full-scope packet coverage of 65% counts as schedule-aligned.
 - One subdivision is one process/partition. State does not cross subdivisions.

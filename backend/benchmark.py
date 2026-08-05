@@ -41,7 +41,7 @@ def burst_events(
 
 
 def main() -> None:
-    with TemporaryDirectory() as temporary_directory:
+    with TemporaryDirectory(ignore_cleanup_errors=True) as temporary_directory:
         os.environ["GRIDWATCH_DB_PATH"] = str(
             Path(temporary_directory) / "gridwatch-benchmark.db"
         )

@@ -61,6 +61,8 @@ class Incident:
     status: TicketStatus
     detected_at: str
     affected_pole_ids: set[str]
+    confirmed_dark_pole_ids: set[str]
+    affected_households: int
     fingerprint: CausalFingerprint
     timeline: list[TimelineEntry]
     crew: str | None = None
@@ -77,6 +79,9 @@ class Incident:
                 "crew": self.crew,
                 "resolved_at": self.resolved_at,
                 "verification_ratio": self.verification_ratio,
+                "affected_households": self.affected_households,
+                "affected_pole_ids": sorted(self.affected_pole_ids),
+                "confirmed_dark_pole_ids": sorted(self.confirmed_dark_pole_ids),
                 "fingerprint": asdict(self.fingerprint),
                 "timeline": [asdict(entry) for entry in self.timeline],
             }
@@ -228,6 +233,10 @@ class GridService:
                 previous_asset = existing.localization.asset_id
                 existing.localization = localization
                 existing.affected_pole_ids.update(affected)
+                existing.confirmed_dark_pole_ids.update(self._confirmed_dark(affected))
+                existing.affected_households = self._estimate_affected_households(
+                    existing.affected_pole_ids
+                )
                 existing.fingerprint = self._causal_fingerprint(
                     localization,
                     existing.affected_pole_ids,
@@ -264,6 +273,8 @@ class GridService:
                 status=TicketStatus.DETECTED,
                 detected_at=now,
                 affected_pole_ids=affected,
+                confirmed_dark_pole_ids=self._confirmed_dark(affected),
+                affected_households=self._estimate_affected_households(affected),
                 fingerprint=fingerprint,
                 timeline=[TimelineEntry(now, "detected", detection_detail)],
             )
@@ -274,7 +285,7 @@ class GridService:
                 continue
             instrumented = [
                 pole_id
-                for pole_id in incident.affected_pole_ids
+                for pole_id in incident.confirmed_dark_pole_ids
                 if self.topology.poles[pole_id].device_id
             ]
             restored = [
@@ -444,6 +455,7 @@ class GridService:
             "summary": {
                 "active_incidents": len(active),
                 "affected_poles": sum(item.localization.affected_poles for item in active),
+                "affected_households": sum(item.affected_households for item in active),
                 "network_poles": len(self.network.poles),
                 "reporting_devices": len(self.observations),
                 "inferred_topology_pct": round(
@@ -509,6 +521,22 @@ class GridService:
             return affected
         downstream = localization.downstream_pole_id
         return {downstream, *self.topology.descendants(downstream)} if downstream else set()
+
+    def _estimate_affected_households(self, affected: set[str]) -> int:
+        total = 0.0
+        for transformer in self.network.transformers:
+            dt_poles = self.topology.by_dt[transformer.dt_id]
+            affected_count = sum(pole_id in affected for pole_id in dt_poles)
+            if affected_count:
+                total += transformer.households_served * affected_count / len(dt_poles)
+        return max(round(total), 1) if affected else 0
+
+    def _confirmed_dark(self, affected: set[str]) -> set[str]:
+        return {
+            pole_id
+            for pole_id in affected
+            if pole_id in self.observations and not self.observations[pole_id].energized
+        }
 
     def _schedule_assessment(self, localization: Localization) -> tuple[str, float | None]:
         scope: tuple[str, str] | None = None

@@ -4,9 +4,10 @@ GridWatch turns pole liveness telemetry into a small number of located electrica
 faults for a control-room operator. It finds the live/dark boundary on recorded
 topology, degrades to an explicit low-confidence zone on inferred topology,
 then produces a **causal fingerprint** showing whether that candidate actually
-predicts the observed packet pattern. Planned outages are treated as testable
-hypotheses, not blanket suppressors. Tickets close only after restoration
-telemetry arrives.
+predicts the observed packet pattern. Estimated homes and a red-to-amber impact
+corridor make downstream consequences visible without confusing inference with
+observed darkness. Planned outages are treated as testable hypotheses, not
+blanket suppressors. Tickets close only after restoration telemetry arrives.
 
 > **Source:** <https://github.com/mardromus/gridwatch>
 >
@@ -33,8 +34,9 @@ clearly labeled deterministic fallback.
 
 1. Open **Scenario lab** and select **Span** under grid faults. One ticket
    appears, not one per dark pole.
-2. Inspect its causal fingerprint: observed loss packets, expected silence,
-   contradictions, unexplained darkness, and model-fit score.
+2. Inspect estimated homes, the downstream impact corridor, and its causal
+   fingerprint: observed loss packets, expected silence, contradictions,
+   unexplained darkness, and model-fit score.
 3. Acknowledge it, assign a crew, then mark work complete. The ticket remains
    open with manual closure disabled.
 4. Select **Repair _target_**. Restoration telemetry verifies and closes it.

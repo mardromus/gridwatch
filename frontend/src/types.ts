@@ -37,6 +37,8 @@ export interface Incident {
   lon: number;
   pincode: string | null;
   affected_poles: number;
+  affected_households: number;
+  affected_pole_ids: string[];
   confidence: number;
   reasons: string[];
   status: TicketStatus;
@@ -62,6 +64,7 @@ export interface Dashboard {
   summary: {
     active_incidents: number;
     affected_poles: number;
+    affected_households: number;
     network_poles: number;
     reporting_devices: number;
     inferred_topology_pct: number;

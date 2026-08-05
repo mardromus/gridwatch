@@ -88,7 +88,7 @@ the acceptance command and public deployment harder to break.
   verification remains mandatory before submission.
 - The frontend build uses Chainguard Node and the runtime uses Python Alpine;
   both are clean in the local registry scan, but the built image still needs a
-  fresh CI scan before submission.
+  fresh scan on a Docker-capable machine before submission.
 - Correlation state and simulations do not replay from SQLite after restart.
 - Scheduled-outage partial-pattern mismatches are detected, but cancellation,
   late starts, and overruns are not reconciled against SCADA switch state.

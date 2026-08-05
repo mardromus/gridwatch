@@ -48,13 +48,21 @@ Copying `.env.example` to `.env` is optional.
 Never commit `.env`. The no-key brief is a supported deterministic fallback, not
 an error state.
 
-## Automated verification
+## Manual verification
 
-GitHub Actions runs backend tests and Ruff, frontend lint and build, and a clean
-Docker Compose smoke test on every push and pull request. The Compose job waits
-for `/api/health`, confirms all 2,160 poles were seeded, injects a span fault,
-and requires exactly one active incident. Keep the default branch green before
-submitting.
+Run this smoke sequence on any machine with Docker before submitting:
+
+```bash
+docker compose up --build --detach --wait
+curl http://localhost:8000/api/health
+curl -X POST -H "Content-Type: application/json" \
+	-d '{"kind":"span"}' http://localhost:8000/api/simulator/inject
+curl http://localhost:8000/api/dashboard
+docker compose down -v
+```
+
+The health response must report 2,160 seeded poles. The dashboard must show
+exactly one active incident after the span injection.
 
 ## Reset
 
@@ -103,4 +111,4 @@ any free-tier cold start, inject and repair a span fault, and put the URL in
 
 The Docker CLI was unavailable in the authoring environment, so the image file
 was reviewed but not built there. The submission owner must complete the fresh
-clone self-check before publishing; do not remove this note until that succeeds.
+clone self-check before submitting; do not remove this note until that succeeds.

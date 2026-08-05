@@ -94,6 +94,7 @@ failure modes, not just framework choices.
   validated.
 
 The Docker image could not be executed because the authoring machine had no
-Docker CLI or engine. A GitHub Actions Compose smoke job was added, but it must
-run successfully after publication; this unresolved validation is repeated in
-deployment documentation rather than silently converted into a claim.
+Docker CLI or engine. The public repository was cloned into a fresh directory;
+all 28 backend tests, Ruff, npm install, ESLint, and the production frontend
+build passed there. Manual Compose verification remains required and is repeated
+in deployment documentation rather than silently converted into a claim.

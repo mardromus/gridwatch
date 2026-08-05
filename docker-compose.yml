@@ -1,0 +1,17 @@
+services:
+  gridwatch:
+    build: .
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENAI_MODEL: "${OPENAI_MODEL:-gpt-4.1-mini}"
+      OPENAI_BASE_URL: "${OPENAI_BASE_URL:-https://api.openai.com/v1}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:8000}"
+      GRIDWATCH_DB_PATH: /data/gridwatch.db
+    volumes:
+      - gridwatch-data:/data
+    restart: unless-stopped
+
+volumes:
+  gridwatch-data:

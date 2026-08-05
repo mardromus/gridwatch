@@ -1,0 +1,22 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+frontend/node_modules/
+frontend/dist/
+frontend/vite.config.js
+frontend/vite.config.d.ts
+*.tsbuildinfo
+*.log
+.DS_Store
+.vscode/
+
+# Local assignment source; the required submission documents are tracked separately.
+00-candidate-brief.md
+01-problem-context.md
+02-data-and-systems.md
+03-deliverables-and-submission.md
+04-evaluation.md
+05-faq.md

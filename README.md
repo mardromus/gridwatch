@@ -12,7 +12,7 @@ blanket suppressors. Tickets close only after restoration telemetry arrives.
 > **Source:** <https://github.com/mardromus/gridwatch>
 >
 > **Live app:** <https://gridwatch-tyq8.onrender.com>
-> **5-minute demo:** `[ADD VIDEO URL]`
+> **5-minute demo:** <https://www.youtube.com/watch?v=jX8PAj8wa2U>
 
 The free-tier deployment may need up to 60 seconds to wake after inactivity.
 Wait for the control room to load before treating the URL as unavailable.

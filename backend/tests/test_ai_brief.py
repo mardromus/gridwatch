@@ -47,12 +47,12 @@ class OperatorBriefTests(unittest.IsolatedAsyncioTestCase):
             "fingerprint": {},
         }
 
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}), patch(
+        with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}), patch(
             "app.ai_brief.httpx.AsyncClient", FakeAsyncClient
         ):
             brief = await generate_operator_brief(incident)
 
-        self.assertEqual(brief.mode, "llm:gpt-4.1-mini")
+        self.assertEqual(brief.mode, "llm:groq:llama-3.3-70b-versatile")
         self.assertEqual(brief.headline, "Localized span fault")
         self.assertEqual(brief.estimated_cost_usd, 0.001)
 

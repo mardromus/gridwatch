@@ -259,6 +259,11 @@ localize, alter confidence, change status, or close a ticket. Output is
 schema-validated, temperature is 0.1, and failures fall back automatically to
 the deterministic brief.
 
+Groq is the preferred OpenAI-compatible provider (`GROQ_API_KEY`, default model
+`llama-3.3-70b-versatile`). Existing OpenAI variables remain a fallback when no
+Groq key is configured. Provider selection never changes the locked input/output
+schema or the deterministic failure path.
+
 Default model cost is estimated at about USD 0.001 per unique selected
 incident/language/workflow state, never per poll or telemetry event. This is
 where a language model earns its keep: concise multilingual communication is

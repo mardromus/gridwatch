@@ -40,9 +40,10 @@ Copying `.env.example` to `.env` is optional.
 |---|---|---|---|
 | `PORT` | No | `8000` | host port mapped to container 8000 |
 | `CORS_ORIGINS` | No | `http://localhost:8000` | comma-separated browser origins |
-| `OPENAI_API_KEY` | No | empty | enables model-generated operator briefs |
-| `OPENAI_MODEL` | No | `gpt-4.1-mini` | OpenAI-compatible chat model |
-| `OPENAI_BASE_URL` | No | OpenAI v1 URL | alternate OpenAI-compatible endpoint |
+| `GROQ_API_KEY` | No | empty | enables automatic Groq-generated operator briefs |
+| `GROQ_MODEL` | No | `llama-3.3-70b-versatile` | Groq chat model |
+| `GROQ_BASE_URL` | No | Groq OpenAI-compatible v1 URL | alternate Groq-compatible endpoint |
+| `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL` | No | empty / OpenAI defaults | backward-compatible provider when Groq is not configured |
 | `GRIDWATCH_DB_PATH` | No | Compose sets `/data/gridwatch.db` | SQLite audit path for non-Compose runs |
 
 Never commit `.env`. The no-key brief is a supported deterministic fallback, not
@@ -83,7 +84,7 @@ docker compose down -v
 The public demo is <https://gridwatch-tyq8.onrender.com>.
 
 `render.yaml` is a Docker web-service blueprint. Push the repository to GitHub,
-create a Render Blueprint from it, and add `OPENAI_API_KEY` only if model-backed
+create a Render Blueprint from it, and add `GROQ_API_KEY` only if model-backed
 briefs are wanted. Set the health check to `/api/health`. The service needs no
 other managed dependency. The container honors Render's injected `PORT`.
 

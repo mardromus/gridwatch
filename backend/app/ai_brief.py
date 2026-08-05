@@ -28,15 +28,33 @@ class ModelBrief(BaseModel):
     language: str
 
 
+def model_config() -> tuple[str, str, str, str] | None:
+    groq_key = os.getenv("GROQ_API_KEY")
+    if groq_key:
+        return (
+            "groq",
+            groq_key,
+            os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+            os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1").rstrip("/"),
+        )
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if openai_key:
+        return (
+            "openai",
+            openai_key,
+            os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+            os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/"),
+        )
+    return None
+
+
 async def generate_operator_brief(
     incident: dict[str, Any], language: str = "English"
 ) -> OperatorBrief:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
+    config = model_config()
+    if not config:
         return deterministic_brief(incident, language)
-
-    model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
-    endpoint = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
+    provider, api_key, model, endpoint = config
     facts = {
         key: incident.get(key)
         for key in (
@@ -85,12 +103,12 @@ FACTS:
             parsed = ModelBrief.model_validate_json(content)
             return OperatorBrief(
                 **parsed.model_dump(),
-                mode=f"llm:{model}",
+                mode=f"llm:{provider}:{model}",
                 estimated_cost_usd=0.001,
             )
     except (httpx.HTTPError, KeyError, TypeError, ValidationError, json.JSONDecodeError):
         fallback = deterministic_brief(incident, language)
-        fallback.mode = "deterministic_fallback_after_model_error"
+        fallback.mode = f"deterministic_fallback_after_{provider}_error"
         return fallback
 
 

@@ -27,7 +27,7 @@ docker compose up --build
 
 Open <http://localhost:8000>. The first start builds the frontend and seeds 2,160
 poles across 30 transformers. No account, migration, key, or second command is
-required. An OpenAI key is optional; without it, the operator brief uses a
+required. A Groq API key is optional; without it, the operator brief uses a
 clearly labeled deterministic fallback.
 
 ## Reviewer path

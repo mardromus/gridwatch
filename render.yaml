@@ -5,8 +5,10 @@ services:
     plan: free
     healthCheckPath: /api/health
     envVars:
-      - key: OPENAI_MODEL
-        value: gpt-4.1-mini
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: GROQ_BASE_URL
+        value: https://api.groq.com/openai/v1
       - key: CORS_ORIGINS
         value: "*"
       - key: GRIDWATCH_DB_PATH

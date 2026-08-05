@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
 import type { Incident, NetworkMap } from "./types";
 
@@ -11,14 +11,24 @@ interface MapViewProps {
 
 function FocusIncident({ incident }: { incident: Incident | null }) {
   const map = useMap();
+  const focusedIncidentId = useRef<string | null>(null);
   useEffect(() => {
-    if (incident) map.flyTo([incident.lat, incident.lon], 16, { duration: 0.65 });
+    if (!incident) {
+      focusedIncidentId.current = null;
+      return;
+    }
+    if (focusedIncidentId.current === incident.incident_id) return;
+    focusedIncidentId.current = incident.incident_id;
+    map.flyTo([incident.lat, incident.lon], 16, { duration: 0.65 });
   }, [incident, map]);
   return null;
 }
 
 export function MapView({ network, incidents, selected, onSelect }: MapViewProps) {
   const poleById = new Map(network?.poles.map((pole) => [pole.pole_id, pole]));
+  const focusedPoles = selected?.dt_id
+    ? network?.poles.filter((pole) => pole.dt_id === selected.dt_id) ?? []
+    : [];
   const point = (poleId: string | null) => {
     const pole = poleId ? poleById.get(poleId) : null;
     return pole ? [pole.lat, pole.lon] as [number, number] : null;
@@ -44,7 +54,7 @@ export function MapView({ network, incidents, selected, onSelect }: MapViewProps
 
   return (
     <div className="map-shell">
-      <MapContainer center={[12.972, 77.61]} zoom={12} preferCanvas zoomControl={false}>
+      <MapContainer center={[12.972, 77.61]} zoom={12} preferCanvas zoomControl>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -62,6 +72,17 @@ export function MapView({ network, incidents, selected, onSelect }: MapViewProps
               <br />{transformer.capacity_kva} kVA · {transformer.households_served} homes
             </Popup>
           </CircleMarker>
+        ))}
+        {focusedPoles.filter((pole) => pole.energized).map((pole) => (
+          <CircleMarker
+            key={pole.pole_id}
+            center={[pole.lat, pole.lon]}
+            radius={2.5}
+            interactive={false}
+            pathOptions={pole.device_id
+              ? { color: "#24755b", fillColor: "#64d49d", fillOpacity: 0.72, weight: 1 }
+              : { color: "#6f7a76", fillColor: "#b9c2bf", fillOpacity: 0.72, weight: 1 }}
+          />
         ))}
         {network?.poles.filter((pole) => !pole.energized).map((pole) => (
           <CircleMarker
@@ -97,6 +118,8 @@ export function MapView({ network, incidents, selected, onSelect }: MapViewProps
       </MapContainer>
       <div className="map-legend" aria-label="Map legend">
         <span><i className="legend-dot transformer" />Transformer</span>
+        {selected?.dt_id && <span><i className="legend-dot live" />Live pole</span>}
+        {selected?.dt_id && <span><i className="legend-dot no-device" />No device</span>}
         <span><i className="legend-dot incident" />Fault boundary</span>
         <span><i className="legend-dot dark" />Dark pole</span>
       </div>

@@ -80,7 +80,7 @@ h1 { font-size: 26px; } h2 { font-size: 25px; overflow-wrap: anywhere; }
 .map-legend, .map-coordinate { position: absolute; z-index: 500; background: rgba(255,255,255,.94); border: 1px solid #aebbb7; box-shadow: 0 4px 14px rgba(23,33,31,.12); border-radius: 4px; }
 .map-legend { left: 12px; bottom: 12px; display: flex; gap: 12px; padding: 9px 11px; font-size: 10px; }
 .map-legend span { display: flex; align-items: center; gap: 5px; }
-.legend-dot { width: 9px; height: 9px; border-radius: 50%; }.legend-dot.transformer { background: #f1c75b; border: 2px solid var(--teal); }.legend-dot.incident { background: var(--red); }.legend-dot.dark { background: #5d2624; }
+.legend-dot { width: 9px; height: 9px; border-radius: 50%; }.legend-dot.transformer { background: #f1c75b; border: 2px solid var(--teal); }.legend-dot.live { background: #64d49d; border: 1px solid var(--green); }.legend-dot.no-device { background: #b9c2bf; border: 1px solid #6f7a76; }.legend-dot.incident { background: var(--red); }.legend-dot.dark { background: #5d2624; }
 .map-coordinate { top: 12px; right: 12px; padding: 7px 10px; color: var(--muted); font-size: 11px; }
 
 .detail-head { position: sticky; top: 0; z-index: 3; background: white; }

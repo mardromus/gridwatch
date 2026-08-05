@@ -60,7 +60,11 @@ export default function App() {
     startTransition(() => {
       setDashboard(nextDashboard);
       if (nextNetwork) setNetwork(nextNetwork);
-      setSelectedId((current) => current ?? nextDashboard.incidents.find((item) => item.status !== "closed")?.incident_id ?? null);
+      setSelectedId((current) =>
+        nextDashboard.incidents.some((item) => item.incident_id === current)
+          ? current
+          : nextDashboard.incidents.find((item) => item.status !== "closed")?.incident_id ?? null,
+      );
     });
   }
 
@@ -83,7 +87,16 @@ export default function App() {
   }, []);
 
   const selected = dashboard?.incidents.find((incident) => incident.incident_id === selectedId) ?? null;
-  const active = dashboard?.incidents.filter((incident) => incident.status !== "closed") ?? [];
+  const orderedIncidents = [...(dashboard?.incidents ?? [])].sort((left, right) => {
+    const leftClosed = left.status === "closed";
+    const rightClosed = right.status === "closed";
+    if (leftClosed !== rightClosed) return leftClosed ? 1 : -1;
+    if (!leftClosed && left.affected_poles !== right.affected_poles) {
+      return right.affected_poles - left.affected_poles;
+    }
+    return Date.parse(right.detected_at) - Date.parse(left.detected_at);
+  });
+  const active = orderedIncidents.filter((incident) => incident.status !== "closed");
 
   async function run(label: string, action: () => Promise<unknown>, success: string, mapChanged = false) {
     setBusy(label);
@@ -148,10 +161,10 @@ export default function App() {
             <span className="count-badge">{active.length} open</span>
           </div>
           <div className="incident-list">
-            {dashboard?.incidents.length === 0 && (
+            {orderedIncidents.length === 0 && (
               <div className="empty-state"><Check size={26} /><strong>No active faults</strong><span>Network telemetry is nominal.</span></div>
             )}
-            {dashboard?.incidents.map((incident) => (
+            {orderedIncidents.map((incident) => (
               <button
                 className={`incident-row ${selectedId === incident.incident_id ? "selected" : ""} ${incident.status === "closed" ? "closed" : ""}`}
                 key={incident.incident_id}

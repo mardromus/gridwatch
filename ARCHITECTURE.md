@@ -222,13 +222,16 @@ a cold start.
 ## Operator UI
 
 The first row answers: how many incidents, how many poles, and whether topology
-is inferred. The left queue orders the operator's work; the map and selected
-ticket stay synchronized; the right pane gives location, impact, confidence,
-causal fit, evidence, and only then workflow actions. Low confidence is amber and
-includes a plain-language reason. The dark fingerprint panel separates location
-uncertainty from packet-pattern fit. A schedule contradiction gets an amber
-warning above that proof. Manual closure is absent. Simulator controls use a
-dark, separate band so they cannot be mistaken for operational actions.
+is inferred. The left queue puts open work first and ranks it by affected poles.
+Selecting a ticket focuses the map once; polling never overrides subsequent pan
+or zoom. The focused DT shows live and no-device poles for local boundary context
+without rendering every live pole network-wide. The right pane gives location,
+impact, confidence, causal fit, evidence, and only then workflow actions. Low
+confidence is amber and includes a plain-language reason. The dark fingerprint
+panel separates location uncertainty from packet-pattern fit. A schedule
+contradiction gets an amber warning above that proof. Manual closure is absent.
+Simulator controls use a dark, separate band so they cannot be mistaken for
+operational actions.
 
 The deliberate omission is analytics. At 2 a.m. historical charts compete with
 the current boundary and next action. The decision most likely to be wrong is

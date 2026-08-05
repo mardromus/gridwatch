@@ -26,9 +26,29 @@ function FocusIncident({ incident }: { incident: Incident | null }) {
 
 export function MapView({ network, incidents, selected, onSelect }: MapViewProps) {
   const poleById = new Map(network?.poles.map((pole) => [pole.pole_id, pole]));
+  const transformerById = new Map(
+    network?.transformers.map((transformer) => [transformer.dt_id, transformer]),
+  );
   const focusedPoles = selected?.dt_id
     ? network?.poles.filter((pole) => pole.dt_id === selected.dt_id) ?? []
     : [];
+  const focusedEdges = focusedPoles
+    .map((pole) => {
+      const upstream = pole.parent_pole_id
+        ? poleById.get(pole.parent_pole_id)
+        : transformerById.get(pole.dt_id);
+      if (!upstream) return null;
+      const positions: [[number, number], [number, number]] = [
+        [upstream.lat, upstream.lon],
+        [pole.lat, pole.lon],
+      ];
+      return {
+        poleId: pole.pole_id,
+        positions,
+        inferred: pole.topology_source === "inferred",
+      };
+    })
+    .filter((edge): edge is NonNullable<typeof edge> => Boolean(edge));
   const point = (poleId: string | null) => {
     const pole = poleId ? poleById.get(poleId) : null;
     return pole ? [pole.lat, pole.lon] as [number, number] : null;
@@ -60,6 +80,16 @@ export function MapView({ network, incidents, selected, onSelect }: MapViewProps
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <FocusIncident incident={selected} />
+        {focusedEdges.map((edge) => (
+          <Polyline
+            key={`edge-${edge.poleId}`}
+            positions={edge.positions}
+            interactive={false}
+            pathOptions={edge.inferred
+              ? { color: "#9a742e", weight: 1.5, opacity: 0.7, dashArray: "4 6" }
+              : { color: "#405b55", weight: 1.5, opacity: 0.62 }}
+          />
+        ))}
         {network?.transformers.map((transformer) => (
           <CircleMarker
             key={transformer.dt_id}
@@ -77,21 +107,38 @@ export function MapView({ network, incidents, selected, onSelect }: MapViewProps
           <CircleMarker
             key={pole.pole_id}
             center={[pole.lat, pole.lon]}
-            radius={2.5}
-            interactive={false}
+            radius={pole.device_id ? 3 : 2.5}
             pathOptions={pole.device_id
               ? { color: "#24755b", fillColor: "#64d49d", fillOpacity: 0.72, weight: 1 }
               : { color: "#6f7a76", fillColor: "#b9c2bf", fillOpacity: 0.72, weight: 1 }}
-          />
+          >
+            <Popup>
+              <strong>{pole.pole_id}</strong>
+              <br />{pole.device_id ? "Reporting live" : "No telemetry device"}
+              <br />{pole.dt_id} · {pole.topology_source} topology
+            </Popup>
+          </CircleMarker>
         ))}
-        {network?.poles.filter((pole) => !pole.energized).map((pole) => (
-          <CircleMarker
-            key={pole.pole_id}
-            center={[pole.lat, pole.lon]}
-            radius={3}
-            pathOptions={{ color: "#9e2f2f", fillColor: "#e5523f", fillOpacity: 0.85, weight: 1 }}
-          />
-        ))}
+        {network?.poles.filter((pole) => !pole.energized).map((pole) => {
+          const isFocused = pole.dt_id === selected?.dt_id;
+          return (
+            <CircleMarker
+              key={pole.pole_id}
+              center={[pole.lat, pole.lon]}
+              radius={isFocused ? 4 : 2.5}
+              interactive={isFocused}
+              pathOptions={{ color: "#9e2f2f", fillColor: "#e5523f", fillOpacity: 0.9, weight: isFocused ? 2 : 1 }}
+            >
+              {isFocused && (
+                <Popup>
+                  <strong>{pole.pole_id}</strong>
+                  <br />Power-loss state
+                  <br />{pole.dt_id} · {pole.topology_source} topology
+                </Popup>
+              )}
+            </CircleMarker>
+          );
+        })}
         {incidents.filter((incident) => incident.status !== "closed").map((incident) => (
           <CircleMarker
             key={incident.incident_id}
@@ -118,6 +165,8 @@ export function MapView({ network, incidents, selected, onSelect }: MapViewProps
       </MapContainer>
       <div className="map-legend" aria-label="Map legend">
         <span><i className="legend-dot transformer" />Transformer</span>
+        {selected?.dt_id && <span><i className="legend-line recorded" />Recorded edge</span>}
+        {selected?.dt_id && <span><i className="legend-line inferred" />Inferred edge</span>}
         {selected?.dt_id && <span><i className="legend-dot live" />Live pole</span>}
         {selected?.dt_id && <span><i className="legend-dot no-device" />No device</span>}
         <span><i className="legend-dot incident" />Fault boundary</span>

@@ -31,8 +31,8 @@ clearly labeled deterministic fallback.
 
 ## Reviewer path
 
-1. Select **Span fault** in the bottom simulator. One ticket appears, not one per
-   dark pole.
+1. Open **Scenario lab** and select **Span** under grid faults. One ticket
+   appears, not one per dark pole.
 2. Inspect its causal fingerprint: observed loss packets, expected silence,
    contradictions, unexplained darkness, and model-fit score.
 3. Acknowledge it, assign a crew, then mark work complete. The ticket remains

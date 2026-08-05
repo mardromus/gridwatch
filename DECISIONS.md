@@ -2,14 +2,23 @@
 
 Newest first. Dates use the latest build date, 2026-08-05.
 
+## Separate the scenario lab from operations
+
+**Chose:** a collapsed training sandbox with grid-fault and exception groups,
+an active-injection count, and isolated repair/reset controls. **Rejected:** a
+permanently expanded row of equally weighted simulator buttons. The flat row
+made the primary control-room surface look like a toy demo; the lab keeps every
+evaluation path close without competing with live incident work.
+
 ## Preserve operator map control
 
 **Chose:** focus the map once when the selected incident changes, then leave pan
 and zoom under operator control across polling refreshes. The focused DT shows
-only local live and no-device context, while the priority queue ranks open work
-by affected poles. **Rejected:** refocusing on every refreshed incident object
-and rendering every live pole network-wide. The former steals control every 2.5
-seconds; the latter obscures the outage boundary and slows map scanning.
+solid recorded edges, dashed inferred edges, and local live/no-device context,
+while the priority queue ranks open work by affected poles. **Rejected:**
+refocusing on every refreshed incident object and rendering every live pole
+network-wide. The former steals control every 2.5 seconds; the latter obscures
+the outage boundary and slows map scanning.
 
 ## Add a causal proof, not another opaque score
 

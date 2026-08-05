@@ -4,9 +4,12 @@ import {
   Bot,
   CalendarX2,
   Check,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   CircleDot,
   Clock3,
+  FlaskConical,
   MapPin,
   Radio,
   RefreshCw,
@@ -23,14 +26,26 @@ import { api } from "./api";
 import { MapView } from "./MapView";
 import type { Dashboard, Incident, NetworkMap, OperatorBrief } from "./types";
 
-const SIMULATIONS = [
-  { kind: "span", label: "Span fault", icon: Zap },
-  { kind: "dt", label: "DT fault", icon: CircleDot },
-  { kind: "feeder", label: "Feeder fault", icon: Activity },
-  { kind: "sensor_failure", label: "Dead sensor", icon: Radio },
-  { kind: "scheduled_outage", label: "Scheduled", icon: Clock3 },
-  { kind: "schedule_mismatch", label: "Plan mismatch", icon: CalendarX2 },
-  { kind: "duplicate_noise", label: "Dirty data", icon: ShieldAlert },
+const SIMULATION_GROUPS = [
+  {
+    label: "Grid faults",
+    tone: "faults",
+    scenarios: [
+      { kind: "span", label: "Span", icon: Zap },
+      { kind: "dt", label: "DT", icon: CircleDot },
+      { kind: "feeder", label: "Feeder", icon: Activity },
+    ],
+  },
+  {
+    label: "Exceptions",
+    tone: "exceptions",
+    scenarios: [
+      { kind: "sensor_failure", label: "Dead sensor", icon: Radio },
+      { kind: "scheduled_outage", label: "Scheduled", icon: Clock3 },
+      { kind: "schedule_mismatch", label: "Plan mismatch", icon: CalendarX2 },
+      { kind: "duplicate_noise", label: "Dirty data", icon: ShieldAlert },
+    ],
+  },
 ];
 
 function formatTime(value: string) {
@@ -50,6 +65,7 @@ export default function App() {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [connectionState, setConnectionState] = useState<"connecting" | "online" | "unavailable">("connecting");
+  const [scenarioOpen, setScenarioOpen] = useState(false);
 
   async function refresh(includeNetwork = false) {
     const [nextDashboard, nextNetwork] = await Promise.all([
@@ -97,6 +113,7 @@ export default function App() {
     return Date.parse(right.detected_at) - Date.parse(left.detected_at);
   });
   const active = orderedIncidents.filter((incident) => incident.status !== "closed");
+  const activeScenarioCount = dashboard?.simulations.filter((item) => !item.repaired).length ?? 0;
 
   async function run(label: string, action: () => Promise<unknown>, success: string, mapChanged = false) {
     setBusy(label);
@@ -206,23 +223,46 @@ export default function App() {
         </aside>
       </main>
 
-      <section className="simulator-bar">
-        <div className="sim-title"><span className="eyebrow">Evaluation console</span><strong>Fault simulator</strong></div>
-        <div className="sim-actions">
-          {SIMULATIONS.map(({ kind, label, icon: Icon }) => (
-            <button key={kind} title={`Inject ${label}`} disabled={Boolean(busy)} onClick={() => void run(kind, () => api.simulate(kind), `${label} injected`, true)}>
-              <Icon size={16} />{label}
-            </button>
-          ))}
-        </div>
-        <div className="repair-actions">
-          {dashboard?.simulations.filter((item) => !item.repaired && !item.scheduled).slice(-2).map((simulation) => (
-            <button className="repair" key={simulation.simulation_id} disabled={Boolean(busy)} onClick={() => void run(`repair-${simulation.simulation_id}`, () => api.repair(simulation.simulation_id), `${simulation.target_id} restored`, true)}>
-              <Wrench size={16} />Repair {simulation.target_id}
-            </button>
-          ))}
-          <button className="icon-button" title="Reset simulation" disabled={Boolean(busy)} onClick={() => void run("reset", api.reset, "Simulation reset", true)}><RefreshCw size={17} /></button>
-        </div>
+      <section className={`simulator-bar ${scenarioOpen ? "expanded" : "collapsed"}`}>
+        <button
+          className="sim-toggle"
+          aria-expanded={scenarioOpen}
+          title={scenarioOpen ? "Close scenario lab" : "Open scenario lab"}
+          onClick={() => setScenarioOpen((open) => !open)}
+        >
+          <FlaskConical size={18} />
+          <span className="sim-toggle-copy"><span className="eyebrow">Training sandbox</span><strong>Scenario lab</strong></span>
+          <small className={activeScenarioCount ? "active" : ""}>
+            {activeScenarioCount ? `${activeScenarioCount} active` : "Baseline"}
+          </small>
+          {scenarioOpen ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
+        </button>
+        {scenarioOpen && (
+          <>
+            <div className="scenario-groups">
+              {SIMULATION_GROUPS.map((group) => (
+                <div className={`scenario-group ${group.tone}`} key={group.label}>
+                  <span>{group.label}</span>
+                  <div className="scenario-actions">
+                    {group.scenarios.map(({ kind, label, icon: Icon }) => (
+                      <button key={kind} title={`Inject ${label}`} disabled={Boolean(busy)} onClick={() => void run(kind, () => api.simulate(kind), `${label} injected`, true)}>
+                        <Icon size={15} />{label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="repair-actions">
+              {dashboard?.simulations.filter((item) => !item.repaired && !item.scheduled).slice(-2).map((simulation) => (
+                <button className="repair" key={simulation.simulation_id} disabled={Boolean(busy)} onClick={() => void run(`repair-${simulation.simulation_id}`, () => api.repair(simulation.simulation_id), `${simulation.target_id} restored`, true)}>
+                  <Wrench size={15} />Repair {simulation.target_id}
+                </button>
+              ))}
+              <button className="icon-button" title="Reset simulation" disabled={Boolean(busy)} onClick={() => void run("reset", api.reset, "Simulation reset", true)}><RefreshCw size={17} /></button>
+            </div>
+          </>
+        )}
       </section>
 
       {message && <div className="toast"><span>{message}</span><button title="Dismiss" onClick={() => setMessage(null)}><X size={15} /></button></div>}

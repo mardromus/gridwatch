@@ -75,16 +75,19 @@ The most useful instructions were constraint-heavy and falsifiable:
 > change confidence, assign a crew, or mutate status. Validate its schema and
 > provide a no-key fallback.
 
-The shipped UI shows that deterministic fallback immediately. A model call is
-made only when an operator asks to refine or translate it, keeping dispatch
-usable without a key and preventing telemetry volume from creating model cost.
+The shipped UI shows the deterministic preview immediately and automatically
+requests the grounded brief for the selected incident and language. Frontend
+and backend caches prevent polling or reselection from repeating calls. Model
+failure or a missing key returns the deterministic fallback automatically, so
+dispatch never waits for an opt-in decision and telemetry volume cannot create
+model cost.
 
 Those prompts worked because they described observable behavior and forbidden
 failure modes, not just framework choices.
 
 ## How output was checked
 
-- 29 backend tests cover localization, topology provenance, simultaneous faults,
+- 30 backend tests cover localization, topology provenance, simultaneous faults,
   sensor noise, evidence-based schedule suppression, planned-window mismatch,
   dirty telemetry, late retries, causal fit, and telemetry-gated closure.
 - The production frontend passed TypeScript build and ESLint.
@@ -99,6 +102,6 @@ failure modes, not just framework choices.
 
 The Docker image could not be executed because the authoring machine had no
 Docker CLI or engine. The public repository was cloned into a fresh directory;
-all 28 backend tests, Ruff, npm install, ESLint, and the production frontend
+all 30 backend tests, Ruff, npm install, ESLint, and the production frontend
 build passed there. Manual Compose verification remains required and is repeated
 in deployment documentation rather than silently converted into a claim.

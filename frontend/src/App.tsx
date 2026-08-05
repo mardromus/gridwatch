@@ -21,7 +21,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import { MapView } from "./MapView";
 import type { Dashboard, Incident, NetworkMap, OperatorBrief } from "./types";
@@ -61,11 +61,14 @@ export default function App() {
   const [network, setNetwork] = useState<NetworkMap | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [brief, setBrief] = useState<OperatorBrief | null>(null);
+  const [briefLoading, setBriefLoading] = useState(false);
   const [language, setLanguage] = useState("English");
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [connectionState, setConnectionState] = useState<"connecting" | "online" | "unavailable">("connecting");
   const [scenarioOpen, setScenarioOpen] = useState(false);
+  const briefCache = useRef(new Map<string, OperatorBrief>());
+  const briefRequest = useRef(0);
 
   async function refresh(includeNetwork = false) {
     const [nextDashboard, nextNetwork] = await Promise.all([
@@ -114,6 +117,50 @@ export default function App() {
   });
   const active = orderedIncidents.filter((incident) => incident.status !== "closed");
   const activeScenarioCount = dashboard?.simulations.filter((item) => !item.repaired).length ?? 0;
+  const selectedIncidentId = selected?.incident_id ?? null;
+  const selectedBriefKey = selected
+    ? [
+        selected.incident_id,
+        language,
+        selected.status,
+        selected.asset_id,
+        selected.fingerprint.fit_score,
+      ].join("|")
+    : null;
+
+  useEffect(() => {
+    const requestId = ++briefRequest.current;
+    const timer = window.setTimeout(() => {
+      if (!selectedBriefKey || !selectedIncidentId) {
+        setBrief(null);
+        setBriefLoading(false);
+        return;
+      }
+      const cached = briefCache.current.get(selectedBriefKey);
+      if (cached) {
+        setBrief(cached);
+        setBriefLoading(false);
+        return;
+      }
+
+      setBrief(null);
+      setBriefLoading(true);
+      void api.brief(selectedIncidentId, language)
+        .then((nextBrief) => {
+          briefCache.current.set(selectedBriefKey, nextBrief);
+          if (briefRequest.current === requestId) setBrief(nextBrief);
+        })
+        .catch((error: unknown) => {
+          if (briefRequest.current === requestId) {
+            setMessage(error instanceof Error ? error.message : "Brief generation failed");
+          }
+        })
+        .finally(() => {
+          if (briefRequest.current === requestId) setBriefLoading(false);
+        });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [language, selectedBriefKey, selectedIncidentId]);
 
   async function run(label: string, action: () => Promise<unknown>, success: string, mapChanged = false) {
     setBusy(label);
@@ -124,19 +171,6 @@ export default function App() {
       setMessage(success);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Action failed");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function generateBrief() {
-    if (!selected) return;
-    setBusy("brief");
-    setBrief(null);
-    try {
-      setBrief(await api.brief(selected.incident_id, language));
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Brief generation failed");
     } finally {
       setBusy(null);
     }
@@ -185,7 +219,7 @@ export default function App() {
               <button
                 className={`incident-row ${selectedId === incident.incident_id ? "selected" : ""} ${incident.status === "closed" ? "closed" : ""}`}
                 key={incident.incident_id}
-                onClick={() => { setSelectedId(incident.incident_id); setBrief(null); }}
+                onClick={() => setSelectedId(incident.incident_id)}
               >
                 <span className={`severity ${incident.confidence < 0.8 ? "uncertain" : ""}`}><AlertTriangle size={17} /></span>
                 <span className="incident-copy">
@@ -210,10 +244,10 @@ export default function App() {
             <IncidentDetail
               incident={selected}
               brief={brief}
+              briefLoading={briefLoading}
               language={language}
               busy={busy}
               onLanguage={setLanguage}
-              onBrief={() => void generateBrief()}
               onAction={(action, crew) => void run(action, () => api.transition(selected.incident_id, action, crew), `${action} recorded`)}
               onClose={() => setSelectedId(null)}
             />
@@ -273,15 +307,15 @@ export default function App() {
 interface DetailProps {
   incident: Incident;
   brief: OperatorBrief | null;
+  briefLoading: boolean;
   language: string;
   busy: string | null;
   onLanguage: (language: string) => void;
-  onBrief: () => void;
   onAction: (action: string, crew?: string) => void;
   onClose: () => void;
 }
 
-function IncidentDetail({ incident, brief, language, busy, onLanguage, onBrief, onAction, onClose }: DetailProps) {
+function IncidentDetail({ incident, brief, briefLoading, language, busy, onLanguage, onAction, onClose }: DetailProps) {
   return (
     <>
       <div className="detail-head">
@@ -318,8 +352,8 @@ function IncidentDetail({ incident, brief, language, busy, onLanguage, onBrief, 
               {" "}poles in PIN {incident.pincode ?? "unavailable"}. Localization confidence is {Math.round(incident.confidence * 100)}%.
             </p>
             <p className="brief-action">Review the highlighted impact corridor, acknowledge the incident, and dispatch only from the locked ticket facts.</p>
-            <button className="ai-button" onClick={onBrief} disabled={Boolean(busy)}><Sparkles size={16} />{busy === "brief" ? "Generating…" : "Refine or translate"}</button>
-            <small>Deterministic preview · model cannot change location or status</small>
+            {briefLoading && <div className="brief-loading"><Sparkles size={15} />Preparing grounded {language} brief…</div>}
+            <small>Automatic deterministic fallback · model cannot change location or status</small>
           </div>
         )}
         {brief && (
@@ -327,7 +361,7 @@ function IncidentDetail({ incident, brief, language, busy, onLanguage, onBrief, 
             <strong>{brief.headline}</strong><p>{brief.situation}</p>
             <ul>{brief.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
             <p className="brief-action">{brief.recommended_action}</p>
-            <small>{brief.mode.replaceAll("_", " ")} · facts locked</small>
+            <small>{brief.language} · {brief.mode.replaceAll("_", " ")} · facts locked</small>
           </div>
         )}
       </section>

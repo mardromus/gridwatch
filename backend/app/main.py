@@ -27,6 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 service = GridService()
+brief_cache: dict[tuple[object, ...], OperatorBrief] = {}
 
 
 class TelemetryPayload(BaseModel):
@@ -134,6 +135,7 @@ def repair(simulation_id: str) -> dict[str, object]:
 @app.post("/api/simulator/reset")
 def reset() -> dict[str, str]:
     service.reset()
+    brief_cache.clear()
     return {"status": "reset"}
 
 
@@ -152,7 +154,24 @@ async def operator_brief(incident_id: str, request: BriefRequest) -> OperatorBri
     incident = service.incidents.get(incident_id)
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
-    return await generate_operator_brief(incident.to_dict(), request.language)
+    incident_data = incident.to_dict()
+    fingerprint = incident_data.get("fingerprint", {})
+    cache_key = (
+        incident_id,
+        incident.detected_at,
+        incident.status,
+        incident.localization.asset_id,
+        fingerprint.get("fit_score") if isinstance(fingerprint, dict) else None,
+        request.language,
+    )
+    cached = brief_cache.get(cache_key)
+    if cached:
+        return cached
+    generated = await generate_operator_brief(incident_data, request.language)
+    brief_cache[cache_key] = generated
+    if len(brief_cache) > 200:
+        brief_cache.pop(next(iter(brief_cache)))
+    return generated
 
 
 static_dir = Path(os.getenv("STATIC_DIR", Path(__file__).parents[2] / "frontend" / "dist"))

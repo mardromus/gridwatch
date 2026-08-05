@@ -1,9 +1,10 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
-from app.main import frontend_file
+from app.ai_brief import deterministic_brief
+from app.main import BriefRequest, brief_cache, frontend_file, operator_brief, service
 
 
 class FrontendFileTests(unittest.TestCase):
@@ -22,6 +23,30 @@ class FrontendFileTests(unittest.TestCase):
             with patch("app.main.static_dir", static_root):
                 self.assertEqual(frontend_file("app.js"), asset)
                 self.assertEqual(frontend_file("../secret.txt"), index)
+
+
+class OperatorBriefCacheTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        service.reset()
+        brief_cache.clear()
+
+    def tearDown(self) -> None:
+        service.reset()
+        brief_cache.clear()
+
+    async def test_same_incident_brief_uses_model_adapter_once(self) -> None:
+        service.inject("span")
+        incident = next(iter(service.incidents.values()))
+        expected = deterministic_brief(incident.to_dict(), "English")
+        adapter = AsyncMock(return_value=expected)
+
+        with patch("app.main.generate_operator_brief", adapter):
+            first = await operator_brief(incident.incident_id, BriefRequest())
+            second = await operator_brief(incident.incident_id, BriefRequest())
+
+        self.assertEqual(first, expected)
+        self.assertEqual(second, expected)
+        adapter.assert_awaited_once()
 
 
 if __name__ == "__main__":

@@ -250,15 +250,20 @@ may show a modal or dedicated route is faster.
 ## AI feature
 
 Every ticket immediately shows a deterministic dispatch preview from its locked
-facts. On request, the LLM refines or translates that brief from the same schema,
-including homes, causal fit, and schedule mismatch evidence. It cannot localize,
-alter confidence, change status, or close a ticket. Output is schema-validated,
-temperature is 0.1, and failures fall back to the deterministic brief.
+facts. Selecting a ticket automatically requests the grounded brief in the
+chosen language; no opt-in prompt or button is shown. Frontend and backend caches
+key by incident, language, workflow state, location, and causal fit, so polling
+and reselection never repeat a model call. The LLM receives the same locked
+schema, including homes, causal fit, and schedule mismatch evidence. It cannot
+localize, alter confidence, change status, or close a ticket. Output is
+schema-validated, temperature is 0.1, and failures fall back automatically to
+the deterministic brief.
 
-Default model cost is estimated at about USD 0.001 per generated brief, not per
-telemetry event. This is where a language model earns its keep: concise
-multilingual communication is variable and human-facing. Graph traversal remains
-deterministic, instant, testable, and free.
+Default model cost is estimated at about USD 0.001 per unique selected
+incident/language/workflow state, never per poll or telemetry event. This is
+where a language model earns its keep: concise multilingual communication is
+variable and human-facing. Graph traversal remains deterministic, instant,
+testable, and free.
 
 ## Measured locally
 

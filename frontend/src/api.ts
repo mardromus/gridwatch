@@ -1,15 +1,36 @@
 import type { Dashboard, NetworkMap, OperatorBrief } from "./types";
 
+const RETRY_DELAYS_MS = [0, 150, 350, 700, 1_200];
+
+function isTransient(response: Response) {
+  return response.status >= 500
+    || (response.status === 404 && response.headers.get("x-render-routing") === "no-server");
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    headers: { "Content-Type": "application/json", ...init?.headers },
-    ...init,
-  });
-  if (!response.ok) {
+  let lastNetworkError: Error | null = null;
+  for (const [attempt, delayMs] of RETRY_DELAYS_MS.entries()) {
+    if (delayMs) await new Promise((resolve) => window.setTimeout(resolve, delayMs));
+
+    let response: Response;
+    try {
+      response = await fetch(path, {
+        headers: { "Content-Type": "application/json", ...init?.headers },
+        ...init,
+      });
+    } catch (error) {
+      lastNetworkError = error instanceof Error ? error : new Error("Network request failed");
+      if (attempt < RETRY_DELAYS_MS.length - 1) continue;
+      throw lastNetworkError;
+    }
+
+    if (response.ok) return response.json() as Promise<T>;
+    if (isTransient(response) && attempt < RETRY_DELAYS_MS.length - 1) continue;
+
     const body = (await response.json().catch(() => null)) as { detail?: string } | null;
     throw new Error(body?.detail ?? `Request failed (${response.status})`);
   }
-  return response.json() as Promise<T>;
+  throw lastNetworkError ?? new Error("Request failed after retries");
 }
 
 export const api = {

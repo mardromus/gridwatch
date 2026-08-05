@@ -10,7 +10,7 @@ telemetry arrives.
 
 > **Source:** <https://github.com/mardromus/gridwatch>
 >
-> **Live app:** `[ADD PUBLIC URL]`  
+> **Live app:** <https://gridwatch-tyq8.onrender.com>
 > **5-minute demo:** `[ADD VIDEO URL]`
 
 The free-tier deployment may need up to 60 seconds to wake after inactivity.

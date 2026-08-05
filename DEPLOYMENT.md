@@ -80,6 +80,8 @@ docker compose down -v
 
 ## Public deployment
 
+The public demo is <https://gridwatch-tyq8.onrender.com>.
+
 `render.yaml` is a Docker web-service blueprint. Push the repository to GitHub,
 create a Render Blueprint from it, and add `OPENAI_API_KEY` only if model-backed
 briefs are wanted. Set the health check to `/api/health`. The service needs no
@@ -100,7 +102,7 @@ any free-tier cold start, inject and repair a span fault, and put the URL in
 |---|---|---|
 | `docker` is not recognized | Docker Desktop/Engine is absent or not on PATH | Install/start Docker, reopen the terminal, run `docker version` |
 | `Bind for 0.0.0.0:8000 failed` | another local process owns port 8000 | set `PORT=8010` in `.env`, rerun, open port 8010 |
-| frontend loads but API calls fail | stale image or incorrect origin | run `docker compose down`, rebuild; include the public origin in `CORS_ORIGINS` |
+| frontend loads but API calls fail | stale image, incorrect origin, or a transient Render `no-server` route | refresh after the deployment is fully live; API calls retry transient edge responses; for Compose, rebuild and include the public origin in `CORS_ORIGINS` |
 | map is gray but controls work | OpenStreetMap tiles are blocked/offline | allow `tile.openstreetmap.org`; API and list remain usable |
 | first start appears stuck | Node and Python layers are building | wait for `Uvicorn running`; later starts use cached layers |
 | brief says deterministic fallback | no key, model timeout, invalid model JSON | expected safe behavior; check key/base URL only if model mode is required |

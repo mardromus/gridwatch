@@ -96,8 +96,8 @@ the acceptance command and public deployment harder to break.
 - Geographic inference is not accuracy-calibrated against surveyed ground truth.
 - OSM tiles require internet access and have no bundled offline fallback.
 - The model-backed Kannada/Hindi quality was not evaluated by a native speaker.
-- No real public URL or demo video exists until the submission owner deploys and
-  records them.
+- The public Render demo exists, but the five-minute submission video still
+  needs to be recorded and linked.
 
 ## With two more weeks
 

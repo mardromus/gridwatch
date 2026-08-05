@@ -88,8 +88,8 @@ failure modes, not just framework choices.
   sensor noise, evidence-based schedule suppression, planned-window mismatch,
   dirty telemetry, late retries, causal fit, and telemetry-gated closure.
 - The production frontend passed TypeScript build and ESLint.
-- Browser automation drove inject -> acknowledge -> assign -> resolved -> brief
-  -> repair -> verified/closed.
+- Browser automation drove inject -> rejected dark-resolution claim -> repair ->
+  telemetry-verified/closed, with no manual resolve prerequisite.
 - Desktop and 390 px mobile layouts were rendered; a 126 px mobile overflow was
   found and fixed, then measured at zero.
 - Browser automation verified a normal span at 100% causal fit and a planned DT

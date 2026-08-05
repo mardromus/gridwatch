@@ -113,7 +113,6 @@ def main() -> None:
                 for action, crew in (
                     ("acknowledge", None),
                     ("assign", "Benchmark crew"),
-                    ("resolve", None),
                 ):
                     transition = client.post(
                         f"/api/incidents/{incident_id}/transition",

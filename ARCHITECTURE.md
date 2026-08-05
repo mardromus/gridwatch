@@ -191,14 +191,16 @@ $O(V+E)$ without changing the result.
 
 ## Ticket and restoration
 
-Allowed states are `detected -> acknowledged -> crew_assigned -> resolved ->
-closed`. `resolved` means only that work was marked complete. There is no manual
-close endpoint. A ticket closes after at least 80% of poles that explicitly
-reported dark send fresh energized telemetry after `resolved`; inferred or
-silent poles widen the impact corridor but do not vote on restoration. The
-timeline records separate `verified` and `closed` events. Repair before work
-completion returns a conflict and leaves the simulator repair action available,
-so restoration cannot bypass workflow or become impossible to verify later.
+`detected -> acknowledged -> crew_assigned` records human workflow progress;
+closure is an independent telemetry decision. There is no manual close endpoint.
+An operator's `resolve` claim while poles remain dark returns HTTP 409, records a
+`resolution_rejected` timeline event, and leaves the ticket open. A ticket closes
+automatically from any open workflow state after at least 80% of poles that
+explicitly reported dark send fresh energized telemetry after detection.
+Inferred or silent poles widen the impact corridor but do not vote on
+restoration. The simulator's Repair action emits `boot` and `power_restored`, so
+the reviewer can repair and observe `verified` then `closed` without clicking
+resolve.
 
 ## API
 
@@ -265,11 +267,11 @@ temporary SQLite file rather than `:memory:`:
 
 | Required metric | Target | Measured | Local result |
 |---|---:|---:|---|
-| fault occurrence -> localized ticket response | < 120 s p95 | 107.4 ms p95 | met |
-| sustained ingest throughput | >= 500 msg/s | 13,358 msg/s across 50,000 events | met |
-| 5,000-message burst without loss | < 10 s | 0.195 s; 5,000 audit rows | met |
-| incident-list API load | < 2 s | 2.4 ms p95 | met |
-| restoration -> auto-verified response | < 120 s p95 | 27.0 ms p95 | met |
+| fault occurrence -> localized ticket response | < 120 s p95 | 229.8 ms p95 | met |
+| sustained ingest throughput | >= 500 msg/s | 10,956 msg/s across 50,000 events | met |
+| 5,000-message burst without loss | < 10 s | 0.249 s; 5,000 audit rows | met |
+| incident-list API load | < 2 s | 4.1 ms p95 | met |
+| restoration -> auto-verified response | < 120 s p95 | 35.6 ms p95 | met |
 
 `backend/benchmark.py` repeats 30 fault and restoration workflows and asserts
 the resulting incident states. HTTP serialization, Pydantic validation,

@@ -138,16 +138,9 @@ class GridServiceTests(unittest.TestCase):
         self.assertTrue(self.service.observations[pole.pole_id].energized)
         self.assertEqual(self.service.dashboard()["incidents"], [])
 
-    def test_repair_only_closes_after_operator_marks_work_complete(self) -> None:
+    def test_repair_auto_closes_without_manual_resolution(self) -> None:
         simulation = self.service.inject("span")
         incident_id = self.service.dashboard()["incidents"][0]["incident_id"]
-        self.service.transition(incident_id, "acknowledge")
-        self.service.transition(incident_id, "assign", "Crew 7")
-        self.service.transition(incident_id, "resolve")
-
-        awaiting = self.service.incidents[incident_id]
-        self.assertEqual(awaiting.status, TicketStatus.RESOLVED)
-        self.assertEqual(awaiting.verification_ratio, 0)
 
         self.service.repair(simulation["simulation_id"])
 
@@ -157,29 +150,28 @@ class GridServiceTests(unittest.TestCase):
         self.assertEqual(closed.timeline[-2].event, "verified")
         self.assertEqual(self.service.audit_store.counts()["incident_snapshots"], 1)
 
-    def test_repair_before_work_complete_is_rejected_and_remains_available(self) -> None:
-        simulation = self.service.inject("span")
+    def test_resolve_while_dark_is_rejected_and_ticket_stays_open(self) -> None:
+        self.service.inject("span")
         incident_id = self.service.dashboard()["incidents"][0]["incident_id"]
+        self.service.transition(incident_id, "acknowledge")
+        self.service.transition(incident_id, "assign", "Crew 7")
 
-        with self.assertRaisesRegex(ValueError, f"Mark {incident_id} work complete"):
-            self.service.repair(simulation["simulation_id"])
+        with self.assertRaisesRegex(ValueError, "telemetry still shows"):
+            self.service.transition(incident_id, "resolve")
 
-        self.assertFalse(self.service.simulations[simulation["simulation_id"]].repaired)
-        self.assertFalse(
-            all(
-                self.service.physical_energized[pole_id]
-                for pole_id in self.service.simulations[
-                    simulation["simulation_id"]
-                ].affected_pole_ids
+        incident = self.service.incidents[incident_id]
+        self.assertEqual(incident.status, TicketStatus.CREW_ASSIGNED)
+        self.assertEqual(incident.timeline[-1].event, "resolution_rejected")
+        self.assertLess(incident.verification_ratio, 0.8)
+        self.assertTrue(
+            any(
+                not self.service.observations[pole_id].energized
+                for pole_id in incident.confirmed_dark_pole_ids
             )
         )
 
     def test_repair_emits_boot_then_restored_with_reset_sequence(self) -> None:
         simulation = self.service.inject("span")
-        incident_id = self.service.dashboard()["incidents"][0]["incident_id"]
-        self.service.transition(incident_id, "acknowledge")
-        self.service.transition(incident_id, "assign", "Crew 7")
-        self.service.transition(incident_id, "resolve")
 
         result = self.service.repair(simulation["simulation_id"])
 

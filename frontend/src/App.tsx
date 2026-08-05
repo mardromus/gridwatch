@@ -381,9 +381,9 @@ function IncidentDetail({ incident, brief, language, busy, onLanguage, onBrief, 
         <div className="workflow-actions">
           {incident.status === "detected" && <button onClick={() => onAction("acknowledge")} disabled={Boolean(busy)}><Check size={16} />Acknowledge</button>}
           {incident.status === "acknowledged" && <button onClick={() => onAction("assign", "Crew 3 · Jayanagar")} disabled={Boolean(busy)}><Users size={16} />Assign crew</button>}
-          {incident.status === "crew_assigned" && <button onClick={() => onAction("resolve")} disabled={Boolean(busy)}><Wrench size={16} />Mark work complete</button>}
+          {incident.status === "crew_assigned" && <button onClick={() => onAction("resolve")} disabled={Boolean(busy)}><Wrench size={16} />Mark resolved</button>}
         </div>
-        {incident.status === "resolved" && <div className="awaiting"><Radio size={16} />Awaiting restoration telemetry. Manual closure is disabled.</div>}
+        {incident.status !== "closed" && <div className="awaiting"><Radio size={16} />Closure requires fresh restoration telemetry. Manual closure is disabled.</div>}
         {incident.status === "closed" && <div className="verified"><Check size={16} />Verified automatically · {Math.round(incident.verification_ratio * 100)}% restored</div>}
       </section>
 

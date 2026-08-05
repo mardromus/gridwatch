@@ -281,23 +281,14 @@ class GridService:
             self._persist_incident(self.incidents[incident_id])
 
         for incident in self.incidents.values():
-            if incident.status != TicketStatus.RESOLVED:
+            if incident.status == TicketStatus.CLOSED:
                 continue
-            instrumented = [
-                pole_id
-                for pole_id in incident.confirmed_dark_pole_ids
-                if self.topology.poles[pole_id].device_id
-            ]
-            restored = [
-                pole_id
-                for pole_id in instrumented
-                if pole_id in self.observations
-                and self.observations[pole_id].energized
-                and self.observations[pole_id].observed_at >= (incident.resolved_at or "")
-            ]
+            restored, instrumented = self._restoration_evidence(incident)
+            previous_ratio = incident.verification_ratio
             incident.verification_ratio = len(restored) / max(len(instrumented), 1)
             if incident.verification_ratio >= 0.8:
                 verified_at = iso_now()
+                incident.resolved_at = verified_at
                 incident.timeline.append(
                     TimelineEntry(
                         verified_at,
@@ -312,6 +303,23 @@ class GridService:
                 )
                 incident.status = TicketStatus.CLOSED
                 self._persist_incident(incident)
+            elif incident.verification_ratio != previous_ratio:
+                self._persist_incident(incident)
+
+    def _restoration_evidence(self, incident: Incident) -> tuple[list[str], list[str]]:
+        instrumented = [
+            pole_id
+            for pole_id in incident.confirmed_dark_pole_ids
+            if self.topology.poles[pole_id].device_id
+        ]
+        restored = [
+            pole_id
+            for pole_id in instrumented
+            if pole_id in self.observations
+            and self.observations[pole_id].energized
+            and self.observations[pole_id].observed_at >= incident.detected_at
+        ]
+        return restored, instrumented
 
     def _correlates(
         self,
@@ -353,12 +361,21 @@ class GridService:
                 incident.crew = crew or "Field crew 3"
                 incident.timeline.append(TimelineEntry(now, "crew_assigned", incident.crew))
             elif action == "resolve" and incident.status == TicketStatus.CREW_ASSIGNED:
-                incident.status = TicketStatus.RESOLVED
-                incident.resolved_at = now
+                restored, instrumented = self._restoration_evidence(incident)
+                incident.verification_ratio = len(restored) / max(len(instrumented), 1)
                 incident.timeline.append(
-                    TimelineEntry(now, "resolved", "Work marked complete; awaiting field telemetry")
+                    TimelineEntry(
+                        now,
+                        "resolution_rejected",
+                        f"Closure rejected: {len(restored)}/{len(instrumented)} "
+                        "confirmed-dark reporting poles restored",
+                    )
                 )
-                self._reconcile()
+                self._persist_incident(incident)
+                raise ValueError(
+                    f"Cannot resolve {incident_id}: telemetry still shows "
+                    f"{len(instrumented) - len(restored)}/{len(instrumented)} reporting poles dark"
+                )
             else:
                 raise ValueError(f"Cannot {action} incident in {incident.status} state")
             self._persist_incident(incident)
@@ -413,19 +430,6 @@ class GridService:
     def repair(self, simulation_id: str) -> dict[str, object]:
         with self._lock:
             simulation = self.simulations[simulation_id]
-            blocking_incident = next(
-                (
-                    incident
-                    for incident in self.incidents.values()
-                    if incident.status not in {TicketStatus.RESOLVED, TicketStatus.CLOSED}
-                    and incident.affected_pole_ids & simulation.affected_pole_ids
-                ),
-                None,
-            )
-            if blocking_incident:
-                raise ValueError(
-                    f"Mark {blocking_incident.incident_id} work complete before repair"
-                )
             for pole_id in simulation.affected_pole_ids:
                 self.physical_energized[pole_id] = True
             events = self._restoration_events(simulation.affected_pole_ids)

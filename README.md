@@ -37,9 +37,10 @@ clearly labeled deterministic fallback.
 2. Inspect estimated homes, the downstream impact corridor, and its causal
    fingerprint: observed loss packets, expected silence, contradictions,
    unexplained darkness, and model-fit score.
-3. Acknowledge it, assign a crew, then mark work complete. The ticket remains
-   open with manual closure disabled.
-4. Select **Repair _target_**. Restoration telemetry verifies and closes it.
+3. Acknowledge and assign it, then try **Mark resolved** while poles are dark.
+   GridWatch rejects the claim and keeps the ticket open.
+4. Select **Repair _target_** without resolving manually. Fresh restoration
+   telemetry verifies and closes the ticket automatically.
 5. Try **Scheduled**; its full DT signature is suppressed. Then try **Plan
    mismatch**: only part of that planned scope goes dark, so GridWatch overrules
    the schedule and raises one localized ticket with the reason visible.
